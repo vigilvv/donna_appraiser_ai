@@ -1,0 +1,13 @@
+*.pth
+*.env
+*#
+*~
+*.pyc
+*__pycache__
+*.json
+
+*.DS_Store
+dist/
+
+# JetBrains IDEs
+.idea/
