@@ -5,9 +5,11 @@ from game_sdk.game.custom_types import Argument, Function, FunctionResultStatus
 
 # ACTION SPACE
 
+
 def generate_picture(prompt: str) -> Tuple[FunctionResultStatus, str, dict[str, Any]]:
     print(f"Generated picture with prompt: {prompt}")
     return FunctionResultStatus.DONE, "Picture generated and presented to the user", {}
+
 
 def generate_music(prompt: str) -> Tuple[FunctionResultStatus, str, dict[str, Any]]:
     print(f"Generated music with prompt: {prompt}")
@@ -29,7 +31,8 @@ action_space = [
     Function(
         fn_name="generate_picture",
         fn_description="Generate a picture",
-        args=[Argument(name="prompt", description="The prompt for the picture")],
+        args=[
+            Argument(name="prompt", description="The prompt for the picture")],
         executable=generate_picture,
     ),
     Function(
@@ -41,7 +44,8 @@ action_space = [
     Function(
         fn_name="check_crypto_price",
         fn_description="Check the price of a crypto currency",
-        args=[Argument(name="currency", description="The currency to check the price of")],
+        args=[
+            Argument(name="currency", description="The currency to check the price of")],
         executable=check_crypto_price,
     ),
 ]
