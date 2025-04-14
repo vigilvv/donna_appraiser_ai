@@ -1,0 +1,68 @@
+{
+  "models": {
+    "LinearRegression": {
+      "R2": 0.8237373245130619,
+      "RMSE": 340096.1014721339,
+      "CV_R2": -8.83344169215625
+    },
+    "Ridge": {
+      "R2": 0.8169975707986155,
+      "RMSE": 346537.23189640936,
+      "CV_R2": -4.1345798052656075
+    },
+    "Lasso": {
+      "R2": 0.8237372652657269,
+      "RMSE": 340096.1586305366,
+      "CV_R2": -8.832116920771142
+    },
+    "RandomForest": {
+      "R2": 0.9803093909706201,
+      "RMSE": 113671.35819589735,
+      "CV_R2": -2.6561142436779033
+    },
+    "XGBoost": {
+      "R2": -1.7956906312512348,
+      "RMSE": 1354459.5204471438,
+      "CV_R2": -0.5985733939967924
+    }
+  },
+  "best_model": "RandomForest",
+  "features_used": [
+    "bed",
+    "bath",
+    "acre_lot",
+    "house_size",
+    "zip_code_00602",
+    "zip_code_00603",
+    "zip_code_00606",
+    "zip_code_00610",
+    "zip_code_00612",
+    "zip_code_00623",
+    "zip_code_00624",
+    "zip_code_00639",
+    "zip_code_00641",
+    "zip_code_00653",
+    "zip_code_00656",
+    "zip_code_00660",
+    "zip_code_00662",
+    "zip_code_00667",
+    "zip_code_00669",
+    "zip_code_00670",
+    "zip_code_00676",
+    "zip_code_00677",
+    "zip_code_00680",
+    "zip_code_00682",
+    "zip_code_00683",
+    "zip_code_00685",
+    "zip_code_00698",
+    "zip_code_00717",
+    "zip_code_00728",
+    "zip_code_00730",
+    "zip_code_00731",
+    "zip_code_00757",
+    "zip_code_00766",
+    "zip_code_00769",
+    "zip_code_00795"
+  ],
+  "data_size": 100
+}
