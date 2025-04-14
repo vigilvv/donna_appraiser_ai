@@ -1,7 +1,7 @@
 """
 This has a main agent with multiple workers
 """
-
+import traceback
 from fastapi.middleware.cors import CORSMiddleware
 from pathlib import Path
 import sys
@@ -19,6 +19,26 @@ from src.train_ml.predict_price import predict_price
 from concurrent.futures import ThreadPoolExecutor
 from game_sdk.game.worker import Worker
 from game_sdk.game.custom_types import Function, Argument, FunctionResult, FunctionResultStatus
+
+
+from fastapi import FastAPI, Request, HTTPException
+from fastapi.responses import JSONResponse, FileResponse
+from uuid import uuid4
+from io import BytesIO
+from reportlab.pdfgen import canvas
+from reportlab.lib.pagesizes import letter
+from reportlab.lib.utils import ImageReader
+from web3 import Web3
+import os
+import hashlib
+
+import datetime
+import base64
+
+
+from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer
+from reportlab.lib.styles import getSampleStyleSheet
+import markdown
 
 # Load .env file
 load_dotenv()
@@ -459,13 +479,169 @@ class AggregatorWorker(Worker):
 aggregator = AggregatorWorker()
 
 
+####
+
+PRIVATE_KEY = os.getenv("PRIVATE_KEY")
+WALLET_ADDRESS = os.getenv("WALLET_ADDRESS")
+CONTRACT_ADDRESS = os.getenv("CONTRACT_ADDRESS")
+RPC_URL = os.getenv("RPC_URL")
+
+# Web3 setup
+w3 = Web3(Web3.HTTPProvider(RPC_URL))
+contract_abi = [
+    {
+        "inputs": [
+            {"internalType": "string", "name": "uuid", "type": "string"},
+            {"internalType": "string", "name": "hash", "type": "string"}
+        ],
+        "name": "storeHash",
+        "outputs": [],
+        "stateMutability": "nonpayable",
+        "type": "function"
+    }
+]
+contract = w3.eth.contract(address=CONTRACT_ADDRESS, abi=contract_abi)
+
+
+PDF_DIR = "generated_pdfs"
+os.makedirs(PDF_DIR, exist_ok=True)
+
+
+# def generate_pdf(uuid: str) -> bytes:
+#     buffer = BytesIO()
+#     p = canvas.Canvas(buffer, pagesize=letter)
+#     p.setFont("Helvetica-Bold", 16)
+#     p.drawString(100, 750, f"House Price Estimate Report - UUID: {uuid}")
+
+#     # folder = "plots"
+#     # images = [f for f in os.listdir(folder) if f.endswith(".png")]
+
+#     # y = 700
+#     # for img in images:
+#     #     img_path = os.path.join(folder, img)
+#     #     image = ImageReader(img_path)
+#     #     p.drawImage(image, 100, y - 200, width=400, height=200)
+#     #     p.drawString(100, y - 210, f"Image: {img}")
+#     #     y -= 250
+#     #     if y < 100:
+#     #         p.showPage()
+#     #         y = 750
+
+#     p.showPage()
+#     p.save()
+#     buffer.seek(0)
+#     return buffer.read()
+
+def generate_pdf(uuid: str, markdown_text: str) -> bytes:
+    try:
+        buffer = BytesIO()
+        doc = SimpleDocTemplate(buffer, pagesize=letter)
+        styles = getSampleStyleSheet()
+
+        print(markdown_text)
+
+        # Convert markdown to HTML
+        html_text = markdown.markdown(markdown_text)
+
+        print(html_text)
+
+        # Create a Paragraph from HTML
+        paragraph = Paragraph(html_text, styles["Normal"])
+
+        # Add elements to PDF
+        elements = [
+            Paragraph(
+                f"<b>House Price Estimate Report - UUID: {uuid}</b>", styles["Title"]),
+            Spacer(1, 20),
+            paragraph,
+        ]
+
+        doc.build(elements)
+        buffer.seek(0)
+        return buffer.read()
+
+    except Exception as e:
+        print("Error sending transaction:")
+        traceback.print_exc()  # Shows the full traceback in terminal/logs
+        raise e  # Re-raise the original exception
+
+
+def hash_pdf(pdf_bytes: bytes) -> str:
+    return hashlib.sha256(pdf_bytes).hexdigest()
+
+
+def save_hash_to_blockchain(uuid: str, hash_str: str) -> str:
+    nonce = w3.eth.get_transaction_count(WALLET_ADDRESS)
+
+    # print("nonce", nonce)
+    try:
+
+        txn = contract.functions.storeHash(uuid, hash_str).build_transaction({
+            "chainId": 84532,
+            "gas": 200000,
+            "gasPrice": w3.to_wei("0.2", "gwei"),
+            "nonce": nonce,
+        })
+
+        # print("txn", txn)
+        signed_txn = w3.eth.account.sign_transaction(
+            txn, private_key=PRIVATE_KEY)
+        # print("signed_txn", signed_txn)
+        tx_hash = w3.eth.send_raw_transaction(signed_txn.raw_transaction)
+        print("tx_hash: ", tx_hash)
+        receipt = w3.eth.wait_for_transaction_receipt(tx_hash)
+
+        # print("receipt: ", receipt)
+        return receipt.transactionHash.hex()
+
+    except Exception as e:
+        print("Error sending transaction:")
+        traceback.print_exc()  # Shows the full traceback in terminal/logs
+        raise e  # Re-raise the original exception
+
+
 @app.post("/estimate", response_model=PriceEstimationResponse)
 async def estimate(request: PriceEstimationRequest):
     """API endpoint for price estimation"""
     status, message, info = aggregator.estimate_price(request.text)
     if status != FunctionResultStatus.DONE:
         raise HTTPException(status_code=400, detail=message)
-    return info
+    # return info
+
+    print("Justification generated")
+    # print(info)
+
+    uuid = str(uuid4())
+    try:
+        pdf_bytes = generate_pdf(uuid, info["justification"])
+        print("PDF bytes generated")
+
+        pdf_hash = hash_pdf(pdf_bytes)
+        print("PDF hash generated")
+
+        tx_hash = save_hash_to_blockchain(uuid, pdf_hash)
+        print("tx_hash: ", tx_hash)
+
+        filename = f"{uuid}.pdf"
+        filepath = os.path.join(PDF_DIR, filename)
+        with open(filepath, "wb") as f:
+            f.write(pdf_bytes)
+
+        # base64 encode the PDF
+        encoded_pdf = base64.b64encode(pdf_bytes).decode("utf-8")
+
+        return JSONResponse({
+            "message": "Report generated and hash stored on Base Sepolia",
+            "justification": info["justification"],
+            "uuid": uuid,
+            "pdf_hash": pdf_hash,
+            "tx_hash": tx_hash,
+            "pdf_base64": encoded_pdf,   # include the PDF directly
+            "pdf_url": f"/download/{uuid}"
+        })
+
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
 
 if __name__ == "__main__":
     # Test the worker implementation
@@ -479,7 +655,3 @@ if __name__ == "__main__":
 
     # Run the FastAPI server
     uvicorn.run(app, host="0.0.0.0", port=8000)
-
-
-# Response(id='resp_67fd63c1e09081928c998e28eabfb40e01328bb2f800b77c', created_at=1744659393.0, error=None, incomplete_details=None, instructions=None, metadata={}, model='gpt-4o-mini-2024-07-18', object='response', output=[ResponseFunctionWebSearch(id='ws_67fd63c2795081929193b1ae72450c7001328bb2f800b77c', status='completed', type='web_search_call'), ResponseOutputMessage(id='msg_67fd63c58f68819295e281b6b2d97f4201328bb2f800b77c', content=[ResponseOutputText(annotations=[], text='```json\n{\n  "location": {\n    "city": "Mayagüez",\n    "state": "Puerto Rico",\n    "county": "Mayagüez",\n    "coordinates": {\n      "latitude": 18.2016,\n      "longitude": -67.1375\n    }\n  },\n  "economics": {\n    "median_income": 15526,\n    "unemployment_rate": 25.1\n  },\n  "neighborhood": {\n    "school_ratings": "Not available",\n    "amenities": "Not specified"\n  },\n  "crime": {\n    "crime_rate": 5.907,\n    "safety_index": "A+"\n  },\n  "real_estate": {\n    "median_home_value": 90900,\n    "median_rent": 401,\n    "rent_vs_own": {\n      "rent": 30,\n      "own": 70\n    }\n  },\n  "other_factors": {\n    "population": 16721,\n    "population_density": 266,\n    "poverty_rate": 66.2,\n    "health_insurance_coverage": 95.1\n  }\n}\n``` ',
-#          type='output_text')], role='assistant', status='completed', type='message')], parallel_tool_calls=True, temperature=1.0, tool_choice='auto', tools=[WebSearchTool(type='web_search_preview', search_context_size='medium', user_location=UserLocation(type='approximate', city=None, country='US', region=None, timezone=None))], top_p=1.0, max_output_tokens=None, previous_response_id=None, reasoning=Reasoning(effort=None, generate_summary=None), status='completed', text=ResponseTextConfig(format=ResponseFormatText(type='text')), truncation='disabled', usage=ResponseUsage(input_tokens=409, input_tokens_details=InputTokensDetails(cached_tokens=0), output_tokens=285, output_tokens_details=OutputTokensDetails(reasoning_tokens=0), total_tokens=694), user=None, store=True)
