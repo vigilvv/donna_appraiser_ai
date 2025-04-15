@@ -9,7 +9,7 @@ from fastapi import FastAPI, HTTPException
 from dotenv import load_dotenv
 from pydantic import BaseModel
 import uvicorn
-from typing import Optional, Dict, List, Tuple
+from typing import Optional, Dict, Tuple
 from openai import OpenAI
 import os
 import numpy as np
@@ -21,18 +21,16 @@ from game_sdk.game.worker import Worker
 from game_sdk.game.custom_types import Function, Argument, FunctionResult, FunctionResultStatus
 
 
-from fastapi import FastAPI, Request, HTTPException
-from fastapi.responses import JSONResponse, FileResponse
+from fastapi.responses import JSONResponse
 from uuid import uuid4
 from io import BytesIO
-from reportlab.pdfgen import canvas
+# from reportlab.pdfgen import canvas
 from reportlab.lib.pagesizes import letter
-from reportlab.lib.utils import ImageReader
+# from reportlab.lib.utils import ImageReader
 from web3 import Web3
-import os
 import hashlib
 
-import datetime
+# import datetime
 import base64
 
 
@@ -56,8 +54,9 @@ if not game_api_key:
     raise ValueError("GAME_SDK_API_KEY is not set")
 
 
-# MODELS = ["linearregression", "lasso", "ridge", "randomforest", "xgboost"]
-MODELS = ["linearregression"]
+MODELS = ["linearregression", "lasso", "ridge", "randomforest", "xgboost"]
+# MODELS = ["linearregression", "xgboost"]
+# MODELS = ["linearregression"]
 
 # FastAPI App
 app = FastAPI()

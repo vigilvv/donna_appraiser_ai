@@ -16,7 +16,7 @@ df = pd.read_csv("src/train_ml/data/cleaned-realtor-data.csv")
 
 print("Loaded cleaned data.")
 
-df = df[:10000]  # In local - for faster processing - remove in remote
+# df = df[:100]  # In local - for faster processing - remove in remote
 print("DF Shape: ", df.shape)
 
 print(df.head(20))

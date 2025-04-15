@@ -1,5 +1,5 @@
 
-### About
+### About (Donna's backstory!)
 
 Donna Sterling isn’t just a real estate appraiser. She’s a force—a rare hybrid of Wall Street sharpness, Silicon Valley brilliance, and old-school Hollywood charm.
 
@@ -39,7 +39,7 @@ The main files are:
 - `train_ml/train_models.py` – used to train the machine learning models (linear regression, ridge regression, lasso regression, random forest, and xgboost)
   - The models are saved in `train_ml/models`
 - `train_ml/data/cleaned-realtor-data.csv` – a custom real estate datataset from realtor.com on US real estate prices
-- `train_ml/predict_price.py` – predict the price
+- `train_ml/predict_price.py` – predict the price≈≈
 - `donna_ai/donna_agenet_workers_new.py` – the main file that contains FastAPI server, aggregator agent, and model workers
 - `smart_contracts/ReportRegistry.sol` – the smart contract that stores the user id and the generated pdf hash
 
@@ -49,7 +49,7 @@ The deployed smart contract address: 0xF9683280a2489a5728092fd6435458e9FEBDd608
 
 Install the packages: `uv pip install .`
 
-Train the models: `uv run python -m src.train_ml.train_models`
+≈Train the models: `uv run python -m src.train_ml.train_models`
 
 Run the server (and the donna agent): `uv run python -m src.donna_ai.donna_agent_workers_new`
 
