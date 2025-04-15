@@ -16,10 +16,10 @@ df = pd.read_csv("src/train_ml/data/cleaned-realtor-data.csv")
 
 print("Loaded cleaned data.")
 
-df = df[:100]  # In local - for faster processing - remove in remote
+df = df[:10000]  # In local - for faster processing - remove in remote
 print("DF Shape: ", df.shape)
 
-# print(df.head())
+print(df.head(20))
 
 # Ensure zip_code is formatted as 5-character string with zero-padding
 df['zip_code'] = df['zip_code'].astype(int).astype(str).str.zfill(5)
